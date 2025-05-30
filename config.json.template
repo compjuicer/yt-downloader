@@ -2,5 +2,6 @@
     "baseURL": "https://localhost:8080",
     "apiKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     "authType": "api_key",
+    "ytDlpPath": "/home/user/bin",
     "format": "/home/user/music/%(channel)s/%(upload_date)s/%(title)s [%(id)s].%(ext)s"
 }
