@@ -28,7 +28,7 @@ async function download(url) {
     ];
 
     return new Promise((resolve, reject) => {
-        const process = spawn('yt-dlp', args);
+        const process = spawn(`${config.ytDlpPath}/yt-dlp`, args);
 
         let output = '';
         let error = '';
@@ -43,11 +43,9 @@ async function download(url) {
 
         process.on('close', (code) => {
             if (code === 0) {
-                console.log(output);
-                resolve();
+                resolve(output);
             } else {
-                console.error(error);
-                reject();
+                reject(error);
             }
         });
     });
@@ -56,11 +54,23 @@ async function download(url) {
 const entries = await getEntries({ title: 'music' });
 
 for (const entry of entries) {
+    const { id, title, url } = entry;
+    let error;
+
     try {
-        const { id, title, url } = entry;
-        console.log(title);
         await download(url);
         await markAsRead(id);
-    } catch (err) {
+    } catch (e) {
+	error = e;
+    }
+
+     if (!error
+        || error.match(/Premieres in /)
+        || error.match(/Requested format is not available./)
+        || error.match(/Video unavailable./)) {
+        await markAsRead(id);
+    } else {
+        console.log(`error downloading: ${title}`);
+        console.log(error);
     }
 }
