@@ -67,6 +67,7 @@ for (const entry of entries) {
      if (!error
         || error.match(/Premieres in /)
         || error.match(/Requested format is not available./)
+        || error.match(/Private video./)
         || error.match(/Video unavailable./)) {
         await markAsRead(id);
     } else {
