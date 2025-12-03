@@ -64,8 +64,8 @@ for (const entry of entries) {
 	error = e;
     }
 
-     if (!error
-        || error.match(/Premieres in /)
+    if (!error
+        //|| error.match(/Premieres in /)
         || error.match(/Requested format is not available./)
         || error.match(/Private video./)
         || error.match(/Video unavailable./)) {
