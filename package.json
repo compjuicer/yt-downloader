@@ -8,9 +8,5 @@
   },
   "author": "",
   "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "lodash": "^4.17.21",
-    "miniflux-js": "^0.0.7"
-  }
+  "description": ""
 }

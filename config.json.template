@@ -1,7 +1,7 @@
 {
-    "baseURL": "https://localhost:8080",
-    "apiKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "authType": "api_key",
+    "baseURL": "http://localhost:8080",
+    "user": "freshrss-user",
+    "apiPassword": "freshrss-api-password",
     "ytDlpPath": "/home/user/bin",
     "format": "/home/user/music/%(channel)s/%(upload_date)s/%(title)s [%(id)s].%(ext)s"
 }

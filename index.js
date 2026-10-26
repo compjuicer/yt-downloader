@@ -1,21 +1,55 @@
 import fs from 'fs';
 import { spawn } from 'child_process';
-import _ from 'lodash';
-import { MinifluxClient } from './miniflux-js-patched.js';
 
 const config = JSON.parse(fs.readFileSync('./config.json'));
-const client = new MinifluxClient(config);
+const api = `${config.baseURL}/api/greader.php`;
+const READ = 'user/-/state/com.google/read';
 
-async function getEntries(filter) {
-    const categories = await client.getCategories();
-    const category = _.find(categories, filter);
-    const { entries } = await client.getCategoryEntries(category.id, { status: 'unread' });
+async function login() {
+    const response = await fetch(`${api}/accounts/ClientLogin`, {
+        method: 'POST',
+        body: new URLSearchParams({ Email: config.user, Passwd: config.apiPassword }),
+    });
+    const body = await response.text();
+    const auth = body.match(/^Auth=(.+)$/m);
+    if (!response.ok || !auth) {
+        throw new Error(`login failed: ${response.status} ${body.trim()}`);
+    }
+
+    return { Authorization: `GoogleLogin auth=${auth[1]}` };
+}
+
+async function getEntries(headers, category) {
+    const entries = [];
+    let continuation;
+
+    do {
+        const params = new URLSearchParams({ xt: READ, n: 1000 });
+        if (continuation) params.set('c', continuation);
+        const response = await fetch(`${api}/reader/api/0/stream/contents/user/-/label/${encodeURIComponent(category)}?${params}`, { headers });
+        if (!response.ok) {
+            throw new Error(`fetching entries failed: ${response.status}`);
+        }
+        const data = await response.json();
+        for (const item of data.items) {
+            entries.push({ id: item.id, title: item.title, url: (item.canonical ?? item.alternate)?.[0]?.href });
+        }
+        continuation = data.continuation;
+    } while (continuation);
 
     return entries;
 }
 
-async function markAsRead(id) {
-    await client.updateEntryStatus(id, 'read');
+async function markAsRead(headers, id) {
+    const token = await (await fetch(`${api}/reader/api/0/token`, { headers })).text();
+    const response = await fetch(`${api}/reader/api/0/edit-tag`, {
+        method: 'POST',
+        headers,
+        body: new URLSearchParams({ i: id, a: READ, T: token.trim() }),
+    });
+    if (!response.ok) {
+        throw new Error(`marking ${id} as read failed: ${response.status}`);
+    }
 }
 
 async function download(url) {
@@ -51,7 +85,15 @@ async function download(url) {
     });
 }
 
-const entries = await getEntries({ title: 'music' });
+const headers = await login();
+const entries = await getEntries(headers, 'music');
+
+if (process.argv.includes('--list')) {
+    for (const { title, url } of entries) {
+        console.log(`${url}  ${title}`);
+    }
+    process.exit(0);
+}
 
 for (const entry of entries) {
     const { id, title, url } = entry;
@@ -59,7 +101,6 @@ for (const entry of entries) {
 
     try {
         await download(url);
-        await markAsRead(id);
     } catch (e) {
 	error = e;
     }
@@ -69,7 +110,7 @@ for (const entry of entries) {
         || error.match(/Requested format is not available./)
         || error.match(/Private video./)
         || error.match(/Video unavailable./)) {
-        await markAsRead(id);
+        await markAsRead(headers, id);
     } else {
         console.log(`error downloading: ${title}`);
         console.log(error);
